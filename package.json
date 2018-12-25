@@ -1,0 +1,30 @@
+{
+  "name": "ruuvitag-iota",
+  "version": "0.0.1",
+  "description": "Reads from the ruuvitag and writes data to the IOTA tangle.",
+  "main": "index.js",
+  "dependencies": {
+    "iota.lib.js": "^0.5.1",
+    "moment": "^2.23.0",
+    "node-ruuvitag": "^4.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magictimelapse/ruuvitag-iota.git"
+  },
+  "keywords": [
+    "iota;",
+    "ruuvitag;",
+    "mam"
+  ],
+  "author": "Michael Rissi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/magictimelapse/ruuvitag-iota/issues"
+  },
+  "homepage": "https://github.com/magictimelapse/ruuvitag-iota#readme"
+}
