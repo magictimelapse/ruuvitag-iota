@@ -1,75 +1,67 @@
 /*
 Author: Robert Lie (mobilefish.com)
-Adjusted by Michael Rissi. Now it runs on the IOTA mainnet.
-The mam_publish.js file publishes random generated numbers on the tangle using MAM.
+Adjusted by Michael Rissi to run on mainnet.
+
+
+The mam_receive.js file extracts stored data from the tangle using MAM.
+This extracted data will be displayed on the screen.
 This file will work on a computer or Raspberry Pi.
-The published data can be viewed using the mam_receive.js file or
+Instead of this file you can also use another tool to display the data:
 https://www.mobilefish.com/services/cryptocurrency/mam.html (Select option: Data receiver)
 Usage:
-1)  You can change the default settings: MODE, SIDEKEY, SECURITYLEVEL or TIMEINTERVAL
-    If you do, make the same changes in mam_receive.js file.
-2)  Start the app: node mam_publish.js
+1)  You can change the default settings: MODE or SIDEKEY
+    If you do, make the same changes in mam_publish.js and mam_sensor.js files.
+2)  Start the app: node mam_receive.js <root>
 More information:
 https://www.mobilefish.com/developer/iota/iota_quickguide_raspi_mam.html
 */
 
 const Mam = require('../lib/mam.client.js');
 const IOTA = require('iota.lib.js');
-const moment = require('moment');
 //const iota = new IOTA({ provider: 'https://nodes.testnet.iota.org:443' });
 const iota = new IOTA({ provider: 'https://potato.iotasalad.org:14265' });
 
-
 const MODE = 'restricted'; // public, private or restricted
 const SIDEKEY = 'mysecret'; // Enter only ASCII characters. Used only in restricted mode
-const SECURITYLEVEL = 3; // 1, 2 or 3
-const TIMEINTERVAL  = 30; // seconds
+
+let root;
+let key;
+
+// Check the arguments
+const args = process.argv;
+if(args.length !=3) {
+    console.log('Missing root as argument: node mam_receive.js <root>');
+    process.exit();
+} else if(!iota.valid.isAddress(args[2])){
+    console.log('You have entered an invalid root: '+ args[2]);
+    process.exit();
+} else {
+    root = args[2];
+}
 
 // Initialise MAM State
-let mamState = Mam.init(iota, undefined, SECURITYLEVEL);
+let mamState = Mam.init(iota);
 
 // Set channel mode
 if (MODE == 'restricted') {
-    const key = iota.utils.toTrytes(SIDEKEY);
+    key = iota.utils.toTrytes(SIDEKEY);
     mamState = Mam.changeMode(mamState, MODE, key);
 } else {
     mamState = Mam.changeMode(mamState, MODE);
 }
 
-// Publish data to the tangle
-const publish = async function(packet) {
-    // Create MAM Payload
-    const trytes = iota.utils.toTrytes(JSON.stringify(packet));
-    const message = Mam.create(mamState, trytes);
+// Receive data from the tangle
+const executeDataRetrieval = async function(rootVal, keyVal) {
+    let resp = await Mam.fetch(rootVal, MODE, keyVal, function(data) {
+        let json = JSON.parse(iota.utils.fromTrytes(data));
+	console.log("received data");
+	console.log(json.dateTime);
+	console.log(json.data);
+	
+	//console.log(`dateTime: ${json.dateTime}, data: ${json.data}`);
+    });
 
-    // Save new mamState
-    mamState = message.state;
-    console.log('Root: ', message.root);
-    console.log('Address: ', message.address);
-
-    // Attach the payload.
-    await Mam.attach(message.payload, message.address);
-
-    return message.root;
+    executeDataRetrieval(resp.nextRoot, keyVal);
 }
 
-const generateJSON = function() {
-    // Generate some random numbers simulating sensor data
-    const data = Math.floor((Math.random()*89)+10);
-    const dateTime = moment().utc().format('DD/MM/YYYY hh:mm:ss');
-    const json = {"data": data, "dateTime": dateTime};
-    return json;
-}
-
-const executeDataPublishing = async function() {
-    const json = generateJSON();
-    console.log("json=",json);
-
-    const root = await publish(json);
-    console.log(`dateTime: ${json.dateTime}, data: ${json.data}, root: ${root}`);
-}
-
-// Start it immediately
-executeDataPublishing();
-
-setInterval(executeDataPublishing, TIMEINTERVAL*1000);
+executeDataRetrieval(root, key);
